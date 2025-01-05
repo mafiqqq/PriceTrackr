@@ -45,34 +45,16 @@ namespace PriceTrackrAPI.Controllers
             return BadRequest(errors);
         }
 
-        //[HttpPost("login")]
-        //public async Task<IActionResult> Login([FromBody] Login model)
-        //{
-        //    var user = await _userManager.FindByNameAsync(model.Username);
-        //    if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-        //    {
-        //        var userRoles = await _userManager.GetRolesAsync(user);
-                
-        //        var authClaims = new List<Claim>
-        //        {
-        //            new Claim(JwtRegisteredClaimNames.Sub, user.UserName),
-        //            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-        //        };
+        [HttpPost("login")]
+        public async Task<IActionResult> Login([FromBody] LoginDTO model)
+        {
+            var (success, token) = await _authService.LoginUserAsync(model);
 
-        //        authClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+            if (success)
+                return Ok(new { token });
 
-        //        var token = new JwtSecurityToken(
-        //            issuer: _configuration["Jwt:Issuer"],
-        //            expires: DateTime.Now.AddMinutes(double.Parse(_configuration["Jwt:ExpiryMinutes"]!)),
-        //            claims: authClaims,
-        //            signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]!)),
-        //            SecurityAlgorithms.HmacSha256)
-        //            );
-
-        //        return Ok(new {Token = new JwtSecurityTokenHandler().WriteToken(token)});
-        //    }
-        //    return Unauthorized();
-        //}
+            return Unauthorized();
+        }
 
         //[HttpPost("add-role")]
         //public async Task<IActionResult> AddRole([FromBody] string role)

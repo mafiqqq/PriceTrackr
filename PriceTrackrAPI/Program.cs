@@ -59,7 +59,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Add auth service
-builder.Services.AddScoped<IAuthService, AuthService>();   
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
