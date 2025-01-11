@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PriceTrackrAPI.Data;
+using PriceTrackrAPI.Services;
+using PriceTrackrAPI.Services.Contract;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,9 +15,12 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add DbContext
 builder.Services.AddDbContext<AppDbContext>(option =>
 option.UseSqlServer(builder.Configuration.GetConnectionString("Development")));
 
+// Add Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.Password.RequiredLength = 8;
@@ -41,7 +46,8 @@ builder.Services.AddAuthentication(options =>
             ValidateAudience = false,
             ValidateLifetime = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            // Can add validAudience and validIssuer after implement Angular frontend
         };
     });
 
@@ -51,6 +57,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
     options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
 });
+
+// Add auth service
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
