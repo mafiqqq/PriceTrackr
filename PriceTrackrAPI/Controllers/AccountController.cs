@@ -1,13 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using PriceTrackrAPI.Model;
+﻿using Microsoft.AspNetCore.Mvc;
 using PriceTrackrAPI.Model.DTO;
-using PriceTrackrAPI.Services;
 using PriceTrackrAPI.Services.Contract;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace PriceTrackrAPI.Controllers
 {   
