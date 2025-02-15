@@ -18,11 +18,19 @@ builder.Services.AddSwaggerGen();
 
 // Add DbContext
 builder.Services.AddDbContext<AppDbContext>(option =>
-option.UseSqlServer(builder.Configuration.GetConnectionString("Development")));
+    option.UseNpgsql(builder.Configuration.GetConnectionString("Development")));
+
+// Add FluentEmail services
+builder.Services
+    .AddFluentEmail(builder.Configuration["Email:SenderEmail"], builder.Configuration["Email:Sender"])
+    .AddSmtpSender(builder.Configuration["Email:Host"], builder.Configuration.GetValue<int>("Email:Port"));
 
 // Add Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
+    options.User.RequireUniqueEmail = true;
+    options.SignIn.RequireConfirmedEmail = true;
+    options.Tokens.EmailConfirmationTokenProvider = TokenOptions.DefaultEmailProvider;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireDigit = false;
@@ -40,6 +48,7 @@ builder.Services.AddAuthentication(options =>
 })
     .AddJwtBearer(options =>
     {
+        options.SaveToken = true;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -68,6 +77,12 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    var application = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var pendingMigrations = await application.Database.GetPendingMigrationsAsync();
+    if (pendingMigrations != null)
+        await application.Database.MigrateAsync();
 }
 
 app.UseHttpsRedirection();

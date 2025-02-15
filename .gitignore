@@ -559,6 +559,10 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
+
+# Docker generated containers
+.containers/
+
 # JetBrains Rider
 
 ### VisualStudio Patch ###

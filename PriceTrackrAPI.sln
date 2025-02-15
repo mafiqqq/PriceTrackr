@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PriceTrackrAPI", "PriceTrackrAPI\PriceTrackrAPI.csproj", "{FC04BEA6-3CDD-4719-A485-CE4508998DF1}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{FAEDBB29-3F7E-43D4-BDA7-3FCCEE2C17D0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FC04BEA6-3CDD-4719-A485-CE4508998DF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC04BEA6-3CDD-4719-A485-CE4508998DF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC04BEA6-3CDD-4719-A485-CE4508998DF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC04BEA6-3CDD-4719-A485-CE4508998DF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAEDBB29-3F7E-43D4-BDA7-3FCCEE2C17D0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAEDBB29-3F7E-43D4-BDA7-3FCCEE2C17D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAEDBB29-3F7E-43D4-BDA7-3FCCEE2C17D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAEDBB29-3F7E-43D4-BDA7-3FCCEE2C17D0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {16155AF0-D00C-484C-998F-1A1E8355777B}
+	EndGlobalSection
+EndGlobal
