@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using PriceTrackrAPI.Model.DTO;
 using PriceTrackrAPI.Services.Contract;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace PriceTrackrAPI.Controllers
-{   
+{
     [Route("api/[controller]")]
     [ApiController]
     public class AccountController : ControllerBase
@@ -85,12 +87,47 @@ namespace PriceTrackrAPI.Controllers
         public async Task<IActionResult> AssignRole([FromBody] UserRoleDTO model)
         {
             var (success, errors) = await _authService.AssignRoleAsync(model);
-           
+
             if (success)
             {
                 return Ok(new { message = "Role Assigned successfully" });
             }
             return BadRequest(errors);
         }
+
+        //[AllowAnonymous]
+        //public IActionResult ForgotPassword()
+        //{ 
+
+        //}
+
+        [HttpPost("forgot-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPassword([Required] string email)
+        {
+            var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ResetPassword", "Account")}";
+            var (success, errors) = await _authService.ForgotPasswordAsync(email, baseUrl);
+            if (success)
+            {
+                return Ok(new { message = "Forgot password email sent successfully" });
+            }
+            return BadRequest(errors);
+        }
+
+        //[HttpGet("reset-password")]
+
+
+        [HttpPost("reset-password")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
+        { 
+            var (success, errors) = await _authService.ResetPasswordAsync(model);
+            if (success)
+            {
+                return Ok(new { message = "Reset password successfully" });
+            }
+            return BadRequest(errors);
+        }
+
     }
 }
