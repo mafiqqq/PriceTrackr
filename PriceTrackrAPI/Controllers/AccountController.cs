@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
 using PriceTrackrAPI.Model.DTO;
 using PriceTrackrAPI.Services.Contract;
+using System.Text;
 
 namespace PriceTrackrAPI.Controllers
 {   
@@ -18,7 +21,8 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO model)
         {
-            var (success, errors) = await _authService.RegisterUserAsync(model);
+            var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ConfirmEmail", "Account")}";
+            var (success, errors) = await _authService.RegisterUserAsync(model, baseUrl);
 
             if (success)
             {
@@ -37,6 +41,34 @@ namespace PriceTrackrAPI.Controllers
                 return Ok(new { token });
 
             return Unauthorized();
+        }
+
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail(string encodedEmail, string encodedToken)
+        {
+            // Decode the email and token
+            try
+            {
+                var decodedEmailBytes = WebEncoders.Base64UrlDecode(encodedEmail);
+                var email = Encoding.UTF8.GetString(decodedEmailBytes);
+
+                var decodedTokenBytes = WebEncoders.Base64UrlDecode(encodedToken);
+                var token = Encoding.UTF8.GetString(decodedTokenBytes);
+
+                var (success, errors) = await _authService.ConfirmEmailAsync(email, token);
+
+                if (success)
+                {
+                    return Ok(new { message = "User email confirmed successfully" });
+                }
+
+                return BadRequest(errors);
+            }
+            catch (FormatException ex)
+            {
+                //_logger.LogError(ex, "Error decoding email address.");
+                return BadRequest("Error decoding email and token:  " + ex.Message); // Or appropriate error response
+            }
         }
 
         [HttpPost("add-role")]

@@ -1,0 +1,31 @@
+services:
+  pricetrackrapi:
+    image: ${DOCKER_REGISTRY-}pricetrackrapi
+    container_name: PriceTrackr.Api
+    build:
+      context: .
+      dockerfile: PriceTrackrAPI/Dockerfile
+    depends_on:
+        - pricetrackr.database
+    ports:
+        - "5000:5000"
+        - "5001:5001"
+  
+  pricetrackr.database:
+    image: postgres:latest
+    container_name: PriceTrackr.PostgreSql
+    environment:
+        - POSTGRES_DB=pricetrackr
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=postgres
+    volumes:
+        - ./.containers/pricetrackr-db:/var/lib/postgresql/data
+    ports:
+        - 5433:5432
+
+  pricetrackr.papercut:
+    image: changemakerstudiosus/papercut-smtp
+    container_name: PriceTrackr.Papercut
+    ports:
+        - 8080:80
+        - 25:25
