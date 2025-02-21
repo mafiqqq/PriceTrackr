@@ -30,7 +30,7 @@ namespace PriceTrackrAPI.Services
             _fluentEmail = fluentEmail;
         }
 
-        public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model, string baseUrl)
+        public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model)
         {
             var user = new IdentityUser { UserName = model.Username, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -43,21 +43,30 @@ namespace PriceTrackrAPI.Services
                 var encodedEmail = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(user.Email));
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
+
                 var confirmationLink = string.Format(
                     "{0}?encodedEmail={1}&encodedToken={2}",
-                    baseUrl,
+                    _configuration["baseUrl"]+"/auth/reset-password",
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
                     );
 
-                // Email verification
-                await _fluentEmail
-                    .To(model.Email)
-                    .Subject("Email verification for PriceTrackr")
-                    .Body($"<p>To verify your email address click <a href='{confirmationLink}'>here </a></p>", isHtml:true)
-                    .SendAsync();
+                try
+                {
+                    // Email verification
+                    await _fluentEmail
+                        .To(model.Email)
+                        .Subject("Email verification for PriceTrackr")
+                        .Body($"<p>To verify your email address click <a href='{confirmationLink}'>here </a></p>", isHtml: true)
+                        .SendAsync();
 
-                return (true, Array.Empty<string>());
+                    return (true, Array.Empty<string>());
+                }
+                catch (Exception ex)
+                {
+                    return (false, new[] { "Failed to send email verification email" });
+                }
+                
             }
 
             return (false, result.Errors.Select(e => e.Description));
@@ -93,6 +102,60 @@ namespace PriceTrackrAPI.Services
             }
 
             return (false, String.Empty);
+        }
+
+        public async Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return (false, new[] { "Email does not exist" });
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+            var encodedEmail = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(user.Email));
+            var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
+
+            var resetPasswordLink = string.Format(
+                    "{0}?encodedEmail={1}&encodedToken={2}",
+                    _configuration["baseUrl"]+"/auth/reset-password",
+                    Uri.EscapeDataString(encodedEmail),
+                    Uri.EscapeDataString(encodedToken)
+                );
+
+            try
+            {
+                // Password reset email
+                await _fluentEmail
+                        .To(user.Email)
+                        .Subject("Password reset for PriceTrackr")
+                        .Body($"<p>To reset your password click <a href='{resetPasswordLink}'>here </a></p>", isHtml: true)
+                        .SendAsync();
+
+                return (true, Array.Empty<string>());
+            }
+            catch (Exception ex)
+            {
+                return (false, new[] { "Failed to send reset password email" });
+            }
+            
+        }
+
+        public async Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(ResetPasswordDTO model)
+        { 
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            { 
+                return (false, new[] { "User cannot found" });
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            if (result.Succeeded)
+            {
+                return (true, Array.Empty<string>());
+            }
+            return (false, new[] { "Failed to reset password" });
         }
 
         public async Task<(bool success, IEnumerable<string> Errors)> AddRoleAsync(string role)
