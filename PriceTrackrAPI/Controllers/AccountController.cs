@@ -46,7 +46,7 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO model)
         {
-            var (success, token) = await _authService.LoginUserAsync(model);
+            var (success, errors, token) = await _authService.LoginUserAsync(model);
 
             if (success)
             { 
@@ -62,13 +62,17 @@ namespace PriceTrackrAPI.Controllers
             { 
                 Result = false,
                 Message = "Authentication Failed",
-                Errors = new List<string> { "Invalid username and password combination" }
+                Errors = errors.ToList()
             });
         }
 
         [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail(string encodedEmail, string encodedToken)
+        public async Task<IActionResult> ConfirmEmail()
         {
+
+            var encodedEmail = Request.Headers["X-Email"];
+            var encodedToken = Request.Headers["X-Token"];
+            
             // Decode the email and token
             try
             {

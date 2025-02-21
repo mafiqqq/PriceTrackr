@@ -16,18 +16,18 @@ namespace PriceTrackrAPI.Services
         private readonly UserManager<IdentityUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
-        private readonly IFluentEmail _fluentEmail;
+        private readonly IEmailService _emailService;
 
         public AuthService(
             UserManager<IdentityUser> userManager, 
             RoleManager<IdentityRole> roleManager,
             IConfiguration configuration,
-            IFluentEmail fluentEmail)
+            IEmailService emailService)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
-            _fluentEmail = fluentEmail;
+            _emailService = emailService;
         }
 
         public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model)
@@ -45,21 +45,19 @@ namespace PriceTrackrAPI.Services
 
 
                 var confirmationLink = string.Format(
-                    "{0}?encodedEmail={1}&encodedToken={2}",
-                    _configuration["baseUrl"]+"/auth/reset-password",
+                    "{0}?encodedEmail={1}&encodedToken={2}&campaign=welcome",
+                    _configuration["baseUrl"]+"/auth/confirm-email",
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
-                    );
+                    ); 
 
+                var emailBody = $"<p>To verify your email address click <a href='{confirmationLink}'>here </a></p>";
+
+                // Send Email service
                 try
                 {
-                    // Email verification
-                    await _fluentEmail
-                        .To(model.Email)
-                        .Subject("Email verification for PriceTrackr")
-                        .Body($"<p>To verify your email address click <a href='{confirmationLink}'>here </a></p>", isHtml: true)
-                        .SendAsync();
-
+                    await _emailService.SendEmailAsync(model.Email, "Email Verification for PriceTrackr", emailBody);
+                    
                     return (true, Array.Empty<string>());
                 }
                 catch (Exception ex)
@@ -91,17 +89,21 @@ namespace PriceTrackrAPI.Services
 
         }
 
-        public async Task<(bool success, string token)> LoginUserAsync(LoginDTO model)
+        public async Task<(bool success, IEnumerable<string> Errors, string token)> LoginUserAsync(LoginDTO model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
+            if (!user.EmailConfirmed) {
+                return (false, new[] { "User has not been verified yet"}, String.Empty);
+            }
+
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
                 var token = await GenerateJwtToken(user);
-                return (true, token);
+                return (true, Array.Empty<string>(), token);
 
             }
 
-            return (false, String.Empty);
+            return (false, new[] { "Failed to login. Invalid username/password" }, String.Empty);
         }
 
         public async Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email)
@@ -118,28 +120,23 @@ namespace PriceTrackrAPI.Services
             var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
             var resetPasswordLink = string.Format(
-                    "{0}?encodedEmail={1}&encodedToken={2}",
+                    "{0}?encodedEmail={1}&encodedToken={2}&campaign=reset-password",
                     _configuration["baseUrl"]+"/auth/reset-password",
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
                 );
 
+            var emailBody = $"<p>To verify your email address click <a href='{resetPasswordLink}'>here </a></p>";
+
             try
             {
-                // Password reset email
-                await _fluentEmail
-                        .To(user.Email)
-                        .Subject("Password reset for PriceTrackr")
-                        .Body($"<p>To reset your password click <a href='{resetPasswordLink}'>here </a></p>", isHtml: true)
-                        .SendAsync();
-
+                await _emailService.SendEmailAsync(user.Email, "Password reset for PriceTrackr", emailBody);
                 return (true, Array.Empty<string>());
             }
             catch (Exception ex)
             {
                 return (false, new[] { "Failed to send reset password email" });
             }
-            
         }
 
         public async Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(ResetPasswordDTO model)
