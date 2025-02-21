@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
 using PriceTrackrAPI.Model.DTO;
 using PriceTrackrAPI.Services.Contract;
+using PriceTrackrAPI.ViewModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 
@@ -23,15 +24,23 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO model)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ConfirmEmail", "Account")}";
-            var (success, errors) = await _authService.RegisterUserAsync(model, baseUrl);
+            //var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ConfirmEmail", "Account")}";
+            var (success, errors) = await _authService.RegisterUserAsync(model);
 
             if (success)
             {
-                return Ok(new { message = "User registered successfully" });
+                return Ok(new AuthResponseViewModel 
+                { 
+                    Result = true,
+                    Message = "User registered successfully" 
+                });
             }
 
-            return BadRequest(errors);
+            return BadRequest(new AuthResponseViewModel { 
+                Result = false,
+                Message = "Registration failed",
+                Errors = errors.ToList()
+            });
         }
 
         [HttpPost("login")]
@@ -40,9 +49,21 @@ namespace PriceTrackrAPI.Controllers
             var (success, token) = await _authService.LoginUserAsync(model);
 
             if (success)
-                return Ok(new { token });
+            { 
+                return Ok(new AuthResponseViewModel 
+                {
+                    Token = token,
+                    Result = true,
+                    Message = "Login Success"
+                });
+            }
 
-            return Unauthorized();
+            return Unauthorized(new AuthResponseViewModel
+            { 
+                Result = false,
+                Message = "Authentication Failed",
+                Errors = new List<string> { "Invalid username and password combination" }
+            });
         }
 
         [HttpGet("confirm-email")]
@@ -61,15 +82,27 @@ namespace PriceTrackrAPI.Controllers
 
                 if (success)
                 {
-                    return Ok(new { message = "User email confirmed successfully" });
+                    return Ok(new AuthResponseViewModel {
+                        Result = true,
+                        Message = "User email confirmed successfully"
+                    });
                 }
 
-                return BadRequest(errors);
+                return BadRequest(new AuthResponseViewModel { 
+                    Result = false,
+                    Message = "User email failed to confirm",
+                    Errors = errors.ToList()
+                });
             }
             catch (FormatException ex)
             {
                 //_logger.LogError(ex, "Error decoding email address.");
-                return BadRequest("Error decoding email and token:  " + ex.Message); // Or appropriate error response
+                return BadRequest(new AuthResponseViewModel
+                {
+                    Result = false,
+                    Message = "Error decoding confirm email",
+                    Errors = new List<string> { ex.Message }
+                });
             }
         }
 
@@ -103,15 +136,26 @@ namespace PriceTrackrAPI.Controllers
 
         [HttpPost("forgot-password")]
         [AllowAnonymous]
-        public async Task<IActionResult> ForgotPassword([Required] string email)
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordViewModel model)
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ResetPassword", "Account")}";
-            var (success, errors) = await _authService.ForgotPasswordAsync(email, baseUrl);
+            //var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ResetPassword", "Account")}";
+
+
+            var (success, errors) = await _authService.ForgotPasswordAsync(model.email);
             if (success)
             {
-                return Ok(new { message = "Forgot password email sent successfully" });
+                return Ok(new AuthResponseViewModel
+                {
+                    Message = "Forgot password email sent successfully",
+                    Result = true
+                });
             }
-            return BadRequest(errors);
+
+            return BadRequest(new AuthResponseViewModel { 
+                Result = false,
+                Message = "Failed to send forgot-password email",
+                Errors = errors.ToList()
+            });
         }
 
         //[HttpGet("reset-password")]
@@ -124,9 +168,16 @@ namespace PriceTrackrAPI.Controllers
             var (success, errors) = await _authService.ResetPasswordAsync(model);
             if (success)
             {
-                return Ok(new { message = "Reset password successfully" });
+                return Ok(new AuthResponseViewModel { 
+                    Result = true,
+                    Message = "Reset password successfully"
+                });
             }
-            return BadRequest(errors);
+            return BadRequest(new AuthResponseViewModel { 
+                Result = false,
+                Message = "Failed to reset password",
+                Errors = errors.ToList()
+            });
         }
 
     }

@@ -30,7 +30,7 @@ namespace PriceTrackrAPI.Services
             _fluentEmail = fluentEmail;
         }
 
-        public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model, string baseUrl)
+        public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model)
         {
             var user = new IdentityUser { UserName = model.Username, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -43,12 +43,14 @@ namespace PriceTrackrAPI.Services
                 var encodedEmail = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(user.Email));
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
+
                 var confirmationLink = string.Format(
                     "{0}?encodedEmail={1}&encodedToken={2}",
-                    baseUrl,
+                    _configuration["baseUrl"]+"/auth/reset-password",
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
                     );
+
                 try
                 {
                     // Email verification
@@ -102,7 +104,7 @@ namespace PriceTrackrAPI.Services
             return (false, String.Empty);
         }
 
-        public async Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email, string baseUrl)
+        public async Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email)
         {
             var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
@@ -117,7 +119,7 @@ namespace PriceTrackrAPI.Services
 
             var resetPasswordLink = string.Format(
                     "{0}?encodedEmail={1}&encodedToken={2}",
-                    baseUrl,
+                    _configuration["baseUrl"]+"/auth/reset-password",
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
                 );

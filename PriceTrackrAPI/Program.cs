@@ -78,6 +78,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
+    app.UseCors(options =>
+    {
+        options.AllowAnyHeader();
+        options.AllowAnyMethod();
+        options.AllowAnyOrigin();
+    });
+
     var application = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
 
     var pendingMigrations = await application.Database.GetPendingMigrationsAsync();
