@@ -1,5 +1,4 @@
-﻿using FluentEmail.Core;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.IdentityModel.Tokens;
 using PriceTrackrAPI.Model.DTO;
@@ -126,7 +125,7 @@ namespace PriceTrackrAPI.Services
                     Uri.EscapeDataString(encodedToken)
                 );
 
-            var emailBody = $"<p>To verify your email address click <a href='{resetPasswordLink}'>here </a></p>";
+            var emailBody = $"<p>To reset your password click <a href='{resetPasswordLink}'>here </a></p>";
 
             try
             {
@@ -139,15 +138,17 @@ namespace PriceTrackrAPI.Services
             }
         }
 
-        public async Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(ResetPasswordDTO model)
+        public async Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(string email, string token, ResetPasswordDTO model)
         { 
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            
+            
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
             { 
                 return (false, new[] { "User cannot found" });
             }
 
-            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.Password);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.Password);
             if (result.Succeeded)
             {
                 return (true, Array.Empty<string>());

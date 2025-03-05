@@ -10,6 +10,6 @@ namespace PriceTrackrAPI.Services.Contract
         Task<(bool success, IEnumerable<string> Errors)> AssignRoleAsync(UserRoleDTO model);
         Task<(bool success, IEnumerable<string> Errors)> ConfirmEmailAsync(string email, string token);
         Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email);
-        Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(ResetPasswordDTO model);
+        Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(string email, string token, ResetPasswordDTO model);
     }
 }
