@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Build.Execution;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PriceTrackrAPI.Data;
@@ -20,10 +21,10 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(option =>
     option.UseNpgsql(builder.Configuration.GetConnectionString("Development")));
 
-// Add FluentEmail services
-builder.Services
-    .AddFluentEmail(builder.Configuration["Email:SenderEmail"], builder.Configuration["Email:Sender"])
-    .AddSmtpSender(builder.Configuration["Email:Host"], builder.Configuration.GetValue<int>("Email:Port"));
+//// Add FluentEmail services
+//builder.Services
+//    .AddFluentEmail(builder.Configuration["Email:SenderEmail"], builder.Configuration["Email:Sender"])
+//    .AddSmtpSender(builder.Configuration["Email:Host"], builder.Configuration.GetValue<int>("Email:Port"));
 
 // Add Identity services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -39,6 +40,13 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
+
+// Configure custom token provider settings if needed
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
+{
+    // Set custom expiration 
+    options.TokenLifespan = TimeSpan.FromHours(24);
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -69,6 +77,9 @@ builder.Services.AddAuthorization(options =>
 
 // Add auth service
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Add Email services
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 

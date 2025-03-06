@@ -24,7 +24,6 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDTO model)
         {
-            //var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ConfirmEmail", "Account")}";
             var (success, errors) = await _authService.RegisterUserAsync(model);
 
             if (success)
@@ -46,7 +45,7 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDTO model)
         {
-            var (success, token) = await _authService.LoginUserAsync(model);
+            var (success, errors, token) = await _authService.LoginUserAsync(model);
 
             if (success)
             { 
@@ -62,13 +61,17 @@ namespace PriceTrackrAPI.Controllers
             { 
                 Result = false,
                 Message = "Authentication Failed",
-                Errors = new List<string> { "Invalid username and password combination" }
+                Errors = errors.ToList()
             });
         }
 
         [HttpGet("confirm-email")]
-        public async Task<IActionResult> ConfirmEmail(string encodedEmail, string encodedToken)
+        public async Task<IActionResult> ConfirmEmail()
         {
+
+            var encodedEmail = Request.Headers["X-Email"];
+            var encodedToken = Request.Headers["X-Token"];
+            
             // Decode the email and token
             try
             {
@@ -128,19 +131,10 @@ namespace PriceTrackrAPI.Controllers
             return BadRequest(errors);
         }
 
-        //[AllowAnonymous]
-        //public IActionResult ForgotPassword()
-        //{ 
-
-        //}
-
         [HttpPost("forgot-password")]
         [AllowAnonymous]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordViewModel model)
         {
-            //var baseUrl = $"{Request.Scheme}://{Request.Host}{Url.Action("ResetPassword", "Account")}";
-
-
             var (success, errors) = await _authService.ForgotPasswordAsync(model.email);
             if (success)
             {
@@ -158,26 +152,65 @@ namespace PriceTrackrAPI.Controllers
             });
         }
 
-        //[HttpGet("reset-password")]
-
 
         [HttpPost("reset-password")]
         [AllowAnonymous]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDTO model)
-        { 
-            var (success, errors) = await _authService.ResetPasswordAsync(model);
-            if (success)
+        {
+            var encodedEmail = Request.Headers["X-Email"];
+            var encodedToken = Request.Headers["X-Token"];
+
+            // Decode the email and token
+            try
             {
-                return Ok(new AuthResponseViewModel { 
-                    Result = true,
-                    Message = "Reset password successfully"
+                var decodedEmailBytes = WebEncoders.Base64UrlDecode(encodedEmail);
+                var email = Encoding.UTF8.GetString(decodedEmailBytes);
+
+                var decodedTokenBytes = WebEncoders.Base64UrlDecode(encodedToken);
+                var token = Encoding.UTF8.GetString(decodedTokenBytes);
+
+                var (success, errors) =  await _authService.ResetPasswordAsync(email, token, model);
+
+                if (success)
+                {
+                    return Ok(new AuthResponseViewModel
+                    {
+                        Result = true,
+                        Message = "Reset password successfully"
+                    });
+                }
+
+                return BadRequest(new AuthResponseViewModel
+                {
+                    Result = false,
+                    Message = "Failed to reset password",
+                    Errors = errors.ToList()
                 });
             }
-            return BadRequest(new AuthResponseViewModel { 
-                Result = false,
-                Message = "Failed to reset password",
-                Errors = errors.ToList()
-            });
+            catch (FormatException ex)
+            {
+                //_logger.LogError(ex, "Error decoding email address.");
+                return BadRequest(new AuthResponseViewModel
+                {
+                    Result = false,
+                    Message = "Error decoding confirm email",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
+
+            //var (success, errors) = await _authService.ResetPasswordAsync(encodedEmail, encodedToken, model);
+            //if (success)
+            //{
+            //    return Ok(new AuthResponseViewModel { 
+            //        Result = true,
+            //        Message = "Reset password successfully"
+            //    });
+            //}
+            //return BadRequest(new AuthResponseViewModel { 
+            //    Result = false,
+            //    Message = "Failed to reset password",
+            //    Errors = errors.ToList()
+            //});
         }
 
     }
