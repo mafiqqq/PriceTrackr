@@ -197,20 +197,6 @@ namespace PriceTrackrAPI.Controllers
                     Errors = new List<string> { ex.Message }
                 });
             }
-
-            //var (success, errors) = await _authService.ResetPasswordAsync(encodedEmail, encodedToken, model);
-            //if (success)
-            //{
-            //    return Ok(new AuthResponseViewModel { 
-            //        Result = true,
-            //        Message = "Reset password successfully"
-            //    });
-            //}
-            //return BadRequest(new AuthResponseViewModel { 
-            //    Result = false,
-            //    Message = "Failed to reset password",
-            //    Errors = errors.ToList()
-            //});
         }
 
     }
