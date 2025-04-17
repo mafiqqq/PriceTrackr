@@ -7,6 +7,12 @@ WORKDIR /app
 EXPOSE 5000
 EXPOSE 5001
 
+# Development stage with SDK for hot reload
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS develop
+WORKDIR /src
+COPY ["PriceTrackrAPI/PriceTrackrAPI.csproj", "PriceTrackrAPI/"]
+RUN dotnet restore "./PriceTrackrAPI/PriceTrackrAPI.csproj"
+## Note: For development we don't copy the source code here - it will be mounted as a volume
 
 # This stage is used to build the service project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build

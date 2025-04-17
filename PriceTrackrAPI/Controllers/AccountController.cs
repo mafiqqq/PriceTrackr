@@ -49,6 +49,15 @@ namespace PriceTrackrAPI.Controllers
 
             if (success)
             { 
+                if (token == String.Empty)
+                {
+                    return Ok(new AuthResponseViewModel
+                    {
+                        Token = String.Empty,
+                        Result = true,
+                        Message = "OTP Email Verification has been sent."
+                    });
+                }
                 return Ok(new AuthResponseViewModel 
                 {
                     Token = token,
@@ -145,9 +154,19 @@ namespace PriceTrackrAPI.Controllers
             var (success, errors, token) = await _authService.VerifyOtpAsync(model);
             if (success)
             {
-                return Ok(new { message = "OTP Verification completed" });
+                return Ok(new AuthResponseViewModel
+                {
+                    Token = token,
+                    Result = true,
+                    Message = "Login Success via OTP Verification"
+                });
             }
-            return BadRequest(errors);
+            return BadRequest(new AuthResponseViewModel
+            {
+                Result = false,
+                Message = "OTP Verification failed",
+                Errors = errors.ToList()
+            });
         }
 
         [HttpPost("forgot-password")]

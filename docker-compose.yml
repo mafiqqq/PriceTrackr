@@ -5,11 +5,16 @@ services:
     build:
       context: .
       dockerfile: PriceTrackrAPI/Dockerfile
+      target: development
     depends_on:
         - pricetrackr.database
     ports:
         - "5000:5000"
         - "5001:5001"
+    volumes:
+        - ./:/src
+    working_dir: /src/PriceTrackrAPI
+    command: dotnet watch run --no-launch-profile
   
   pricetrackr.database:
     image: postgres:latest
