@@ -65,6 +65,14 @@ namespace PriceTrackrAPI.Controllers
             });
         }
 
+        //[HttpGet("two-factor-auth")]
+        //public async Task<IActionResult> SendTwoFactorCode()
+        //{
+        //    var (success, errors) = await _authService.SendTwoFactorCodeAsync();
+
+
+        //}
+
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail()
         {
@@ -127,6 +135,17 @@ namespace PriceTrackrAPI.Controllers
             if (success)
             {
                 return Ok(new { message = "Role Assigned successfully" });
+            }
+            return BadRequest(errors);
+        }
+
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDTO model)
+        {
+            var (success, errors, token) = await _authService.VerifyOtpAsync(model);
+            if (success)
+            {
+                return Ok(new { message = "OTP Verification completed" });
             }
             return BadRequest(errors);
         }

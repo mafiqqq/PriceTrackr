@@ -29,6 +29,9 @@ namespace PriceTrackrAPI.Services
             _emailService = emailService;
         }
 
+        /**
+         Register User
+        */
         public async Task<(bool success, IEnumerable<string> Errors)> RegisterUserAsync(RegisterDTO model)
         {
             var user = new IdentityUser { UserName = model.Username, Email = model.Email };
@@ -38,6 +41,7 @@ namespace PriceTrackrAPI.Services
             {
                 // Token generation
                 var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var otp = await _userManager.GenerateTwoFactorTokenAsync(user, "Email");
                 // Confirmation link (using absolute URL)
                 var encodedEmail = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(user.Email));
                 var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
@@ -51,11 +55,12 @@ namespace PriceTrackrAPI.Services
                     ); 
 
                 var emailBody = $"<p>To verify your email address click <a href='{confirmationLink}'>here </a></p>";
+                var emailHeader = "Email Verification OTP is: " + otp;
 
                 // Send Email service
                 try
                 {
-                    await _emailService.SendEmailAsync(model.Email, "Email Verification for PriceTrackr", emailBody);
+                    await _emailService.SendEmailAsync(model.Email, emailHeader, emailBody);
                     
                     return (true, Array.Empty<string>());
                 }
@@ -97,12 +102,36 @@ namespace PriceTrackrAPI.Services
 
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
+                //if (user.TwoFactorEnabled)
+                //{
+                //    return (true, Array.Empty<string>(), String.Empty, true);
+                //}
+                
                 var token = await GenerateJwtToken(user);
                 return (true, Array.Empty<string>(), token);
 
             }
 
             return (false, new[] { "Failed to login. Invalid username/password" }, String.Empty);
+        }
+
+        public async Task<(bool success, IEnumerable<string> Errors, string token)> VerifyOtpAsync(VerifyOtpDTO model) 
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+            {
+                return (false, new[] { "Email does not exist." }, String.Empty);
+            }
+
+            var isValid = await _userManager.VerifyTwoFactorTokenAsync(user, "Email", model.Otp);
+
+            if (isValid)
+            {
+                var token = await GenerateJwtToken(user);
+                return (true, Array.Empty<string>(), token);
+            }
+
+            return (false, new[] { "Invalid verification code" }, String.Empty);
         }
 
         public async Task<(bool success, IEnumerable<string> Errors)> ForgotPasswordAsync(string email)
@@ -124,6 +153,7 @@ namespace PriceTrackrAPI.Services
                     Uri.EscapeDataString(encodedEmail),
                     Uri.EscapeDataString(encodedToken)
                 );
+
 
             var emailBody = $"<p>To reset your password click <a href='{resetPasswordLink}'>here </a></p>";
 
@@ -155,6 +185,11 @@ namespace PriceTrackrAPI.Services
             }
             return (false, new[] { "Failed to reset password" });
         }
+
+        //public async Task<(bool success, IEnumerable<string> Errors)> SendTwoFactorCodeAsync()
+        //{ 
+            
+        //}
 
         public async Task<(bool success, IEnumerable<string> Errors)> AddRoleAsync(string role)
         {
