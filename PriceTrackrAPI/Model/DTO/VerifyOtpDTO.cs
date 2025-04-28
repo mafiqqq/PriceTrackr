@@ -5,8 +5,7 @@ namespace PriceTrackrAPI.Model.DTO
     public class VerifyOtpDTO
     {
         [Required]
-        [EmailAddress]
-        public string Email { get; set; } = String.Empty;
+        public string UserId { get; set; } = String.Empty;
 
         [Required]
         [StringLength(6)]

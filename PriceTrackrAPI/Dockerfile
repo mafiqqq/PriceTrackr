@@ -8,7 +8,7 @@ EXPOSE 5000
 EXPOSE 5001
 
 # Development stage with SDK for hot reload
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS develop
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS development
 WORKDIR /src
 COPY ["PriceTrackrAPI/PriceTrackrAPI.csproj", "PriceTrackrAPI/"]
 RUN dotnet restore "./PriceTrackrAPI/PriceTrackrAPI.csproj"

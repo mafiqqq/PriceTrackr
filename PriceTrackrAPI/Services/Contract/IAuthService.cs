@@ -13,5 +13,6 @@ namespace PriceTrackrAPI.Services.Contract
         Task<(bool success, IEnumerable<string> Errors)> ResetPasswordAsync(string email, string token, ResetPasswordDTO model);
         //Task<(bool success, IEnumerable<string> Errors)> SendTwoFactorCodeAsync();
         Task<(bool success, IEnumerable<string> Errors, string token)> VerifyOtpAsync(VerifyOtpDTO model);
+        Task<(bool success, IEnumerable<string> Errors)> LogoutUserAsync();
     }
 }

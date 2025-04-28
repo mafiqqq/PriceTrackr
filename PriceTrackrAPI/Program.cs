@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Build.Execution;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
 using PriceTrackrAPI.Data;
 using PriceTrackrAPI.Services;
@@ -66,7 +67,25 @@ builder.Services.AddAuthentication(options =>
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
             // Can add validAudience and validIssuer after implement Angular frontend
         };
+
+        // Custom event handler to check token blacklist
+        //options.Events = new JwtBearerEvents
+        //{
+        //    OnTokenValidated = async context =>
+        //    {
+        //        //var distributedCache = context.HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
+        //        var tokenString = context.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+
+        //        // Check if token is blacklisted
+        //        var blacklisted = await distributedCache.GetStringAsync($"blacklisted_token:{tokenString}");
+        //        if (blacklisted != null)
+        //        {
+        //            context.Fail("Token has been revoked");
+        //        }
+        //    }
+        //};
     });
+
 
 
 builder.Services.AddAuthorization(options =>
@@ -74,6 +93,9 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
     options.AddPolicy("UserPolicy", policy => policy.RequireRole("User"));
 });
+
+// Register the HttpContextAccessor
+builder.Services.AddHttpContextAccessor();
 
 // Add auth service
 builder.Services.AddScoped<IAuthService, AuthService>();

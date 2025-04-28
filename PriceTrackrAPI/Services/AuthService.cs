@@ -99,15 +99,39 @@ namespace PriceTrackrAPI.Services
 
         }
 
+        public async Task<(bool success, IEnumerable<string> Errors)> LogoutUserAsync()
+        {
+            try
+            {
+                // Sign out user from Identity system
+                await _signInManager.SignOutAsync();
+
+                // If using distributed token invalidation, you could add the token to a blacklist here
+                // This would require accessing the token from the HTTP context
+                // You'd need to inject IHttpContextAccessor and access the token:
+                // var token = _httpContextAccessor.HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+                // Then add this token to a blacklist (Redis, database, etc.)
+                // @mafiqqq - Study on this concept
+
+                return (true, Array.Empty<string>());
+            }
+            catch (Exception ex) {
+                return (false, new[] { $"Logout failed: {ex.Message}" });
+            }
+
+        }
+
         public async Task<(bool success, IEnumerable<string> Errors, string token)> LoginUserAsync(LoginDTO model)
         {
             var user = await _userManager.FindByNameAsync(model.Username);
-            if (!user.EmailConfirmed) {
-                return (false, new[] { "User has not been verified yet" }, String.Empty);
-            }
 
             if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
             {
+                if (!user.EmailConfirmed)
+                {
+                    return (false, new[] { "User has not been verified yet" }, String.Empty);
+                }
+
                 // Flow if 2FA enabled
                 if (user.TwoFactorEnabled)
                 {
@@ -118,14 +142,17 @@ namespace PriceTrackrAPI.Services
                     var emailBody = $"<p>To verify your email address click {otp}";
                     var emailHeader = $"Email Verification OTP is: {otp}";
 
-                    
-                    return await SendEmail(user.Email, emailBody, emailHeader);
+
+                    await SendEmail(user.Email, emailBody, emailHeader);
+
+                    return (true, Array.Empty<string>(), String.Empty);
                 }
-
                 // Flow if 2FA is not enabled
-                var token = await GenerateJwtToken(user);
-                return (true, Array.Empty<string>(), token);
-
+                else
+                {
+                    var token = await GenerateJwtToken(user);
+                    return (true, Array.Empty<string>(), token);
+                }
             }
 
             return (false, new[] { "Failed to login. Invalid username/password" }, String.Empty);
@@ -133,13 +160,16 @@ namespace PriceTrackrAPI.Services
 
         public async Task<(bool success, IEnumerable<string> Errors, string token)> VerifyOtpAsync(VerifyOtpDTO model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
+            var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null)
             {
-                return (false, new[] { "Email does not exist." }, String.Empty);
+                return (false, new[] { "User does not exist." }, String.Empty);
             }
 
-            var isValid = await _userManager.VerifyTwoFactorTokenAsync(user, "Email", model.Otp);
+            var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+                user, 
+                _userManager.Options.Tokens.AuthenticatorTokenProvider, 
+                model.Otp);
 
             if (isValid)
             {
@@ -280,6 +310,27 @@ namespace PriceTrackrAPI.Services
                 SecurityAlgorithms.HmacSha256
                 ));
 
+            // What is the diff for this code
+            //var claims = new List<Claim>
+            //{
+            //    new Claim(ClaimTypes.NameIdentifier, user.Id),
+            //    new Claim(ClaimTypes.Name, user.UserName),
+            //    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            //};
+
+            //claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+
+            //var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            //var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            //var expires = DateTime.Now.AddMinutes(Convert.ToDouble(_configuration["Jwt:ExpiryMinutes"]));
+
+            //var token = new JwtSecurityToken(
+            //    issuer: _configuration["Jwt:Issuer"],
+            //    audience: _configuration["Jwt:Audience"],
+            //    claims: claims,
+            //    expires: expires,
+            //    signingCredentials: creds
+            //);
             var tokenHandler = new JwtSecurityTokenHandler().WriteToken(token);
 
             return tokenHandler;

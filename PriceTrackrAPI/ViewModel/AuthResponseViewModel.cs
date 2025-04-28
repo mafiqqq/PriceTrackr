@@ -1,10 +1,9 @@
 ﻿namespace PriceTrackrAPI.ViewModel
 {
-    public class AuthResponseViewModel
+    public class AuthResponseViewModel : BaseResponseViewModel
     {
         public string Token { get; set; } = string.Empty;
-        public bool Result { get; set; }
-        public string Message { get; set; } = string.Empty;
-        public List<string> Errors { get; set; } = new List<string>();
+        public bool RequiresTwoFactor { get; set; } = false;
+        public string UserId { get; set; } = string.Empty;
     }
 }

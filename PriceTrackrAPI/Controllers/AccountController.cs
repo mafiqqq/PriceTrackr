@@ -28,14 +28,14 @@ namespace PriceTrackrAPI.Controllers
 
             if (success)
             {
-                return Ok(new AuthResponseViewModel 
+                return Ok(new BaseResponseViewModel 
                 { 
                     Result = true,
                     Message = "User registered successfully" 
                 });
             }
 
-            return BadRequest(new AuthResponseViewModel { 
+            return BadRequest(new BaseResponseViewModel { 
                 Result = false,
                 Message = "Registration failed",
                 Errors = errors.ToList()
@@ -51,14 +51,33 @@ namespace PriceTrackrAPI.Controllers
             { 
                 if (token == String.Empty)
                 {
+                    // Create a temp encrypted session
+                    var twoFactorToken = Guid.NewGuid().ToString();
+
+                    // Store in session or temp db record
+                    HttpContext.Session.SetString("2FA_TOKEN", twoFactorToken);
+
+                    // Associate user with this token (in memory or db)
+                    //_twoFactorService.StoreUserForTwoFactor(twoFactorToken, user.Id);
+
+                    // Set HTTP-only cookie that can't be accessed by Javascript
+                    Response.Cookies.Append("X-2FA-Token", twoFactorToken, new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = true,
+                        SameSite = SameSiteMode.Strict,
+                        MaxAge = TimeSpan.FromMinutes(5)
+                    });
+
                     return Ok(new AuthResponseViewModel
                     {
                         Token = String.Empty,
+                        RequiresTwoFactor = true,
                         Result = true,
                         Message = "OTP Email Verification has been sent."
                     });
                 }
-                return Ok(new AuthResponseViewModel 
+                return Ok(new AuthResponseViewModel
                 {
                     Token = token,
                     Result = true,
@@ -66,10 +85,32 @@ namespace PriceTrackrAPI.Controllers
                 });
             }
 
-            return Unauthorized(new AuthResponseViewModel
+            return Unauthorized(new BaseResponseViewModel
             { 
                 Result = false,
                 Message = "Authentication Failed",
+                Errors = errors.ToList()
+            });
+        }
+
+        [HttpPost("logout")]
+        [Authorize]
+        public async Task<IActionResult> Logout()
+        {
+            var (success, errors) = await _authService.LogoutUserAsync();
+
+            if (success) {
+                return Ok(new BaseResponseViewModel
+                {
+                    Result = true,
+                    Message = "Logout successful"
+                });
+            }
+
+            return BadRequest(new BaseResponseViewModel
+            {
+                Result = false,
+                Message = "Logout failed",
                 Errors = errors.ToList()
             });
         }
@@ -102,13 +143,13 @@ namespace PriceTrackrAPI.Controllers
 
                 if (success)
                 {
-                    return Ok(new AuthResponseViewModel {
+                    return Ok(new BaseResponseViewModel {
                         Result = true,
                         Message = "User email confirmed successfully"
                     });
                 }
 
-                return BadRequest(new AuthResponseViewModel { 
+                return BadRequest(new BaseResponseViewModel { 
                     Result = false,
                     Message = "User email failed to confirm",
                     Errors = errors.ToList()
@@ -117,7 +158,7 @@ namespace PriceTrackrAPI.Controllers
             catch (FormatException ex)
             {
                 //_logger.LogError(ex, "Error decoding email address.");
-                return BadRequest(new AuthResponseViewModel
+                return BadRequest(new BaseResponseViewModel
                 {
                     Result = false,
                     Message = "Error decoding confirm email",
@@ -151,6 +192,28 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDTO model)
         {
+            // Get the 2FA token from cookie
+            if (Request.Cookies.TryGetValue("X-2FA-Token", out var twoFactorToken))
+            {
+                return Unauthorized(new BaseResponseViewModel
+                {
+                    Result = false,
+                    Message = "Invalid 2FA session"
+                });
+            }
+
+            // Get the user ID associated with this token
+            //var userId = _twoFactorService.GetUserIdForTwoFactor(twoFactorToken);
+            //if (string.IsNullOrEmpty(userId))
+            //{
+            //    return Unauthorized(new BaseResponseViewModel
+            //    {
+            //        Result = false,
+            //        Message = "Invalid 2FA session"
+            //    });
+            //}
+
+
             var (success, errors, token) = await _authService.VerifyOtpAsync(model);
             if (success)
             {
@@ -161,7 +224,7 @@ namespace PriceTrackrAPI.Controllers
                     Message = "Login Success via OTP Verification"
                 });
             }
-            return BadRequest(new AuthResponseViewModel
+            return BadRequest(new BaseResponseViewModel
             {
                 Result = false,
                 Message = "OTP Verification failed",
@@ -176,14 +239,14 @@ namespace PriceTrackrAPI.Controllers
             var (success, errors) = await _authService.ForgotPasswordAsync(model.email);
             if (success)
             {
-                return Ok(new AuthResponseViewModel
+                return Ok(new BaseResponseViewModel
                 {
                     Message = "Forgot password email sent successfully",
                     Result = true
                 });
             }
 
-            return BadRequest(new AuthResponseViewModel { 
+            return BadRequest(new BaseResponseViewModel { 
                 Result = false,
                 Message = "Failed to send forgot-password email",
                 Errors = errors.ToList()
@@ -211,14 +274,14 @@ namespace PriceTrackrAPI.Controllers
 
                 if (success)
                 {
-                    return Ok(new AuthResponseViewModel
+                    return Ok(new BaseResponseViewModel
                     {
                         Result = true,
                         Message = "Reset password successfully"
                     });
                 }
 
-                return BadRequest(new AuthResponseViewModel
+                return BadRequest(new BaseResponseViewModel
                 {
                     Result = false,
                     Message = "Failed to reset password",
@@ -228,7 +291,7 @@ namespace PriceTrackrAPI.Controllers
             catch (FormatException ex)
             {
                 //_logger.LogError(ex, "Error decoding email address.");
-                return BadRequest(new AuthResponseViewModel
+                return BadRequest(new BaseResponseViewModel
                 {
                     Result = false,
                     Message = "Error decoding confirm email",
