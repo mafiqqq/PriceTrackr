@@ -49,6 +49,18 @@ builder.Services.Configure<DataProtectionTokenProviderOptions>(options =>
     options.TokenLifespan = TimeSpan.FromHours(24);
 });
 
+
+// Add Session
+//builder.Services.AddDistributedMemoryCache();
+//builder.Services.AddSession(options =>
+//{
+//    options.IdleTimeout = TimeSpan.FromMinutes(30);
+//    options.Cookie.HttpOnly = true;
+//    options.Cookie.IsEssential = true;
+//    options.Cookie.SameSite = SameSiteMode.Strict;
+//    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Requires HTTPS 
+//});
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -66,6 +78,17 @@ builder.Services.AddAuthentication(options =>
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
             // Can add validAudience and validIssuer after implement Angular frontend
+        };
+
+
+        // Extract JWT from cookies instead of Authorization Header
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                context.Token = context.Request.Cookies["X-Access-Token"];
+                return Task.CompletedTask;
+            }
         };
 
         // Custom event handler to check token blacklist
@@ -86,6 +109,7 @@ builder.Services.AddAuthentication(options =>
         //};
     });
 
+// Add Cookie Policy
 
 
 builder.Services.AddAuthorization(options =>
@@ -113,9 +137,10 @@ if (app.Environment.IsDevelopment())
 
     app.UseCors(options =>
     {
-        options.AllowAnyHeader();
-        options.AllowAnyMethod();
-        options.AllowAnyOrigin();
+        options.WithOrigins("http://localhost:4200")
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials();
     });
 
     var application = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();

@@ -158,9 +158,12 @@ namespace PriceTrackrAPI.Services
             return (false, new[] { "Failed to login. Invalid username/password" }, String.Empty);
         }
 
-        public async Task<(bool success, IEnumerable<string> Errors, string token)> VerifyOtpAsync(VerifyOtpDTO model)
+        public async Task<(bool success, IEnumerable<string> Errors, string token)> VerifyOtpAsync(string username, VerifyOtpDTO model)
         {
-            var user = await _userManager.FindByIdAsync(model.UserId);
+
+            var user = await _userManager.FindByNameAsync(username); // Get the currently logged-in user (if any context exists)
+
+            //var user = await _userManager.FindByIdAsync(model.UserId);
             if (user == null)
             {
                 return (false, new[] { "User does not exist." }, String.Empty);
@@ -168,7 +171,7 @@ namespace PriceTrackrAPI.Services
 
             var isValid = await _userManager.VerifyTwoFactorTokenAsync(
                 user, 
-                _userManager.Options.Tokens.AuthenticatorTokenProvider, 
+                _userManager.Options.Tokens.EmailConfirmationTokenProvider, 
                 model.Otp);
 
             if (isValid)
@@ -238,11 +241,6 @@ namespace PriceTrackrAPI.Services
             return (false, new[] { "Failed to reset password" });
         }
 
-        //public async Task<(bool success, IEnumerable<string> Errors)> SendTwoFactorCodeAsync()
-        //{ 
-
-        //}
-
         public async Task<(bool success, IEnumerable<string> Errors)> AddRoleAsync(string role)
         {
             if (!await _roleManager.RoleExistsAsync(role))
@@ -290,6 +288,7 @@ namespace PriceTrackrAPI.Services
                 return (false, new[] { "Failed to send email verification email" }, String.Empty);
             }
         }
+
         public async Task<string> GenerateJwtToken(IdentityUser user)
         {
             var userRoles = await _userManager.GetRolesAsync(user);

@@ -49,25 +49,19 @@ namespace PriceTrackrAPI.Controllers
 
             if (success)
             { 
-                if (token == String.Empty)
+                if (string.IsNullOrEmpty(token))
                 {
-                    // Create a temp encrypted session
-                    var twoFactorToken = Guid.NewGuid().ToString();
-
-                    // Store in session or temp db record
-                    HttpContext.Session.SetString("2FA_TOKEN", twoFactorToken);
-
-                    // Associate user with this token (in memory or db)
-                    //_twoFactorService.StoreUserForTwoFactor(twoFactorToken, user.Id);
-
-                    // Set HTTP-only cookie that can't be accessed by Javascript
-                    Response.Cookies.Append("X-2FA-Token", twoFactorToken, new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.Strict,
-                        MaxAge = TimeSpan.FromMinutes(5)
-                    });
+                    // Create a temp cookie for 2FA flow containing only the username
+                    // Set this temp cookie so can identify the user in next step
+                    Response.Cookies.Append("X-TwoFactorAuth",
+                        model.Username,
+                        new CookieOptions
+                        {
+                            HttpOnly = true,
+                            Secure = true,
+                            SameSite = SameSiteMode.None,
+                            MaxAge = TimeSpan.FromMinutes(10)
+                        });
 
                     return Ok(new AuthResponseViewModel
                     {
@@ -114,14 +108,6 @@ namespace PriceTrackrAPI.Controllers
                 Errors = errors.ToList()
             });
         }
-
-        //[HttpGet("two-factor-auth")]
-        //public async Task<IActionResult> SendTwoFactorCode()
-        //{
-        //    var (success, errors) = await _authService.SendTwoFactorCodeAsync();
-
-
-        //}
 
         [HttpGet("confirm-email")]
         public async Task<IActionResult> ConfirmEmail()
@@ -192,8 +178,14 @@ namespace PriceTrackrAPI.Controllers
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDTO model)
         {
+            // Add this debug code before trying to read the cookie
+            foreach (var cookie in HttpContext.Request.Cookies)
+            {
+                System.Diagnostics.Debug.WriteLine($"Cookie: {cookie.Key} = {cookie.Value}");
+            }
+
             // Get the 2FA token from cookie
-            if (Request.Cookies.TryGetValue("X-2FA-Token", out var twoFactorToken))
+            if (!HttpContext.Request.Cookies.TryGetValue("X-TwoFactorAuth", out var username))
             {
                 return Unauthorized(new BaseResponseViewModel
                 {
@@ -202,33 +194,31 @@ namespace PriceTrackrAPI.Controllers
                 });
             }
 
-            // Get the user ID associated with this token
-            //var userId = _twoFactorService.GetUserIdForTwoFactor(twoFactorToken);
-            //if (string.IsNullOrEmpty(userId))
-            //{
-            //    return Unauthorized(new BaseResponseViewModel
-            //    {
-            //        Result = false,
-            //        Message = "Invalid 2FA session"
-            //    });
-            //}
+            // Call the service to verify OTP
+            var (success, errors, token) = await _authService.VerifyOtpAsync(username, model);
 
-
-            var (success, errors, token) = await _authService.VerifyOtpAsync(model);
-            if (success)
-            {
-                return Ok(new AuthResponseViewModel
+            if (!success) {
+                return BadRequest(new AuthResponseViewModel
                 {
-                    Token = token,
-                    Result = true,
-                    Message = "Login Success via OTP Verification"
+                    Result = false,
+                    Message = "Failed to verify OTP",
+                    Errors = errors.ToList()
                 });
             }
-            return BadRequest(new BaseResponseViewModel
+
+            SetJwtCookie(token);
+
+            // Remove the temp 2FA cookie
+            Response.Cookies.Delete("X-TwoFactorAuth", new CookieOptions { 
+                HttpOnly= true,
+                Secure = true,
+                SameSite = SameSiteMode.None
+            });
+
+            return Ok(new AuthResponseViewModel
             {
-                Result = false,
-                Message = "OTP Verification failed",
-                Errors = errors.ToList()
+                Result = true,
+                RequiresTwoFactor = true,
             });
         }
 
@@ -300,5 +290,16 @@ namespace PriceTrackrAPI.Controllers
             }
         }
 
+        private void SetJwtCookie(string token)
+        {
+            Response.Cookies.Append("X-AuthToken", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                MaxAge = TimeSpan.FromHours(24)
+            });
+        }
     }
+
 }
